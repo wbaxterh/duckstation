@@ -109,7 +109,8 @@ add_library(core
   pcdrv.h
   performance_counters.cpp
   performance_counters.h
-  pio.cpp
+  $<$<NOT:$<BOOL:${EMSCRIPTEN}>>:pio.cpp>
+  $<$<BOOL:${EMSCRIPTEN}>:pio_web.cpp>
   pio.h
   playstation_mouse.cpp
   playstation_mouse.h

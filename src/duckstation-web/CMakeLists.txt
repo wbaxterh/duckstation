@@ -67,6 +67,9 @@ set(EMSCRIPTEN_LINK_FLAGS
   "-s ALLOW_TABLE_GROWTH=1"  # Allow function table to grow dynamically
   "-s RESERVED_FUNCTION_POINTERS=2000"  # Reserve space for virtual function pointers
 
+  # Use MAIN_MODULE=2 to export used symbols and populate vtables
+  "-s MAIN_MODULE=2"  # Export all used symbols (modern replacement for LINKABLE)
+
   # File system pre-loading (we'll load files via JS instead)
   # "--preload-file ${CMAKE_SOURCE_DIR}/data/resources@/app/resources"
 

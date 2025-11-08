@@ -89,7 +89,13 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /clang:-fno-rtti")
   endif()
 else()
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
+  # For Emscripten, we need RTTI for vtables to work properly
+  if(EMSCRIPTEN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+    message(STATUS "Emscripten build: Enabling RTTI for virtual function support")
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
+  endif()
 endif()
 
 # Rewrite paths in macros to be relative to the source directory.

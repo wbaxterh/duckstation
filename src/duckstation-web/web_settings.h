@@ -8,6 +8,10 @@
 #include "common/small_string.h"
 #include "common/types.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include <mutex>
 #include <string>
 #include <vector>
