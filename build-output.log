@@ -1,0 +1,94 @@
+==========================================
+ DuckStation - Web Build
+==========================================
+
+Repository: C:\Users\wesle\Documents\git\duckstation
+Build directory: C:\Users\wesle\Documents\git\duckstation\build-web
+Build type: Release
+
+[Step 0/3] Activating Emscripten environment...
+
+EMSDK environment configured:
+  EMSDK = C:/Users/wesle/Documents/git/duckstation/.emsdk
+  EMSDK_PYTHON = C:\Users\wesle\Documents\git\duckstation\.emsdk\python\3.13.3_64bit\python.exe
+  EMSDK_NODE = C:\Users\wesle\Documents\git\duckstation\.emsdk\node\22.16.0_64bit\bin\node.exe
+
+Emscripten compiler found: emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 4.0.17 (bb11bae9af3a6551132655a0908f86889d2d423b)
+
+[1/4] Configuring CMake...
+
+-- CMake Version: 4.2.0-rc1
+-- CMake System Name: Emscripten
+-- Building for WebAssembly/Emscripten.
+-- Building with Clang/LLVM.
+-- Building for WebAssembly (no native CPU architecture).
+-- Emscripten build detected - skipping desktop dependencies
+-- Using Emscripten-provided libraries (zlib, SDL2, OpenGL ES, etc.)
+-- Adding -g1 to CMAKE_C_FLAGS_RELEASE.
+-- Adding -g1 to CMAKE_CXX_FLAGS_RELEASE.
+-- Building duckstation-web frontend for WebAssembly
+-- Build Type: Release
+-- Building with OpenGL support.
+-- Configuring done (1.6s)
+-- Generating done (0.7s)
+-- Build files have been written to: C:/Users/wesle/Documents/git/duckstation/build-web
+
+[2/4] Building...
+
+[1/9] Generating scmversion.cpp, _scmversion.cpp
+Signature matches, skipping writing "scmversion.cpp"
+[2/7] Building C object dep/libchdr/CMakeFiles/libchdr.dir/src/libchdr_chd.c.o
+[3/7] Building CXX object src/core/CMakeFiles/core.dir/cpu_recompiler_stubs_web.cpp.o
+[4/7] Linking C static library dep\libchdr\liblibchdr.a
+[5/7] Linking CXX static library src\core\libcore.a
+[6/7] Building CXX object src/duckstation-web/CMakeFiles/duckstation-web.dir/web_host.cpp.o
+FAILED: [code=1] src/duckstation-web/CMakeFiles/duckstation-web.dir/web_host.cpp.o 
+C:\Users\wesle\Documents\git\duckstation\.emsdk\upstream\emscripten\em++.bat -c C:/Users/wesle/Documents/git/duckstation/src/duckstation-web/web_host.cpp -DENABLE_OPENGL=1 -D_FILE_OFFSET_BITS=64 -IC:/Users/wesle/Documents/git/duckstation/src/core/.. -IC:/Users/wesle/Documents/git/duckstation/src/common/.. -IC:/Users/wesle/Documents/git/duckstation/dep/fmt/include -IC:/Users/wesle/Documents/git/duckstation/dep/fast_float/include -IC:/Users/wesle/Documents/git/duckstation/src/util/.. -IC:/Users/wesle/Documents/git/duckstation/dep/ffmpeg/include -IC:/Users/wesle/Documents/git/duckstation/dep/simpleini/include -IC:/Users/wesle/Documents/git/duckstation/dep/imgui/include -fno-exceptions -fno-rtti -Wall -Wno-invalid-offsetof -Wno-switch -fno-exceptions -fno-rtti -fmacro-prefix-map="C:/Users/wesle/Documents/git/duckstation"=".." -ffile-prefix-map="C:/Users/wesle/Documents/git/duckstation"=".." -DFMT_EXCEPTIONS=0 -O3 -DNDEBUG -g1 -std=gnu++20 -sUSE_ZLIB=1 -MD -MT src/duckstation-web/CMakeFiles/duckstation-web.dir/web_host.cpp.o -MF src\duckstation-web\CMakeFiles\duckstation-web.dir\web_host.cpp.o.d -o src/duckstation-web/CMakeFiles/duckstation-web.dir/web_host.cpp.o -fPIC
+In file included from C:/Users/wesle/Documents/git/duckstation/src/duckstation-web/web_host.cpp:26:
+In file included from C:/Users/wesle/Documents/git/duckstation/src/core/..\core/system.h:9:
+In file included from C:/Users/wesle/Documents/git/duckstation/src/core/..\util/image.h:8:
+C:/Users/wesle/Documents/git/duckstation/src/core/..\common/intrin.h:144:9: warning: unknown pragma ignored [-Wunknown-pragmas]
+  144 | #pragma warning("Missing implementation")
+      |         ^
+In file included from C:/Users/wesle/Documents/git/duckstation/src/duckstation-web/web_host.cpp:28:
+In file included from C:/Users/wesle/Documents/git/duckstation/src/core/..\core/gpu.h:6:
+In file included from C:/Users/wesle/Documents/git/duckstation/src/core/..\core\gpu_types.h:8:
+In file included from C:/Users/wesle/Documents/git/duckstation/src/core/..\util/gpu_texture.h:6:
+In file included from C:/Users/wesle/Documents/git/duckstation/src/core/..\common/gsvector.h:17:
+C:/Users/wesle/Documents/git/duckstation/src/core/..\common/gsvector_nosimd.h:1527:17: warning: first argument in call to 'memcpy' is a pointer to non-trivially copyable type 'GSVector4i' [-Wnontrivial-memcall]
+ 1527 |     std::memcpy(&ret, p, sizeof(ret.S32));
+      |                 ^
+C:/Users/wesle/Documents/git/duckstation/src/core/..\common/gsvector_nosimd.h:1527:17: note: explicitly cast the pointer to silence this warning
+ 1527 |     std::memcpy(&ret, p, sizeof(ret.S32));
+      |                 ^
+      |                 (void*)
+C:/Users/wesle/Documents/git/duckstation/src/core/..\common/gsvector_nosimd.h:2408:15: warning: first argument in call to 'memcpy' is a pointer to non-trivially copyable type 'GSVector2i' [-Wnontrivial-memcall]
+ 2408 |   std::memcpy(&ret, &v, sizeof(ret));
+      |               ^
+C:/Users/wesle/Documents/git/duckstation/src/core/..\common/gsvector_nosimd.h:2408:15: note: explicitly cast the pointer to silence this warning
+ 2408 |   std::memcpy(&ret, &v, sizeof(ret));
+      |               ^
+      |               (void*)
+C:/Users/wesle/Documents/git/duckstation/src/core/..\common/gsvector_nosimd.h:2438:15: warning: first argument in call to 'memcpy' is a pointer to non-trivially copyable type 'GSVector4i' [-Wnontrivial-memcall]
+ 2438 |   std::memcpy(&ret, &v, sizeof(ret));
+      |               ^
+C:/Users/wesle/Documents/git/duckstation/src/core/..\common/gsvector_nosimd.h:2438:15: note: explicitly cast the pointer to silence this warning
+ 2438 |   std::memcpy(&ret, &v, sizeof(ret));
+      |               ^
+      |               (void*)
+C:/Users/wesle/Documents/git/duckstation/src/duckstation-web/web_host.cpp:408:12: error: out-of-line definition of 'RequestResetSettings' does not match any declaration in namespace 'Host'
+  408 | void Host::RequestResetSettings(bool system, bool controller)
+      |            ^~~~~~~~~~~~~~~~~~~~
+C:/Users/wesle/Documents/git/duckstation/src/duckstation-web/web_host.cpp:413:12: error: out-of-line definition of 'RequestExitApplication' does not match any declaration in namespace 'Host'
+  413 | void Host::RequestExitApplication(bool allow_confirm)
+      |            ^~~~~~~~~~~~~~~~~~~~~~
+C:/Users/wesle/Documents/git/duckstation/src/duckstation-web/web_host.cpp:418:12: error: out-of-line definition of 'RequestExitBigPicture' does not match any declaration in namespace 'Host'
+  418 | void Host::RequestExitBigPicture()
+      |            ^~~~~~~~~~~~~~~~~~~~~
+4 warnings and 3 errors generated.
+ninja: build stopped: subcommand failed.
+
+ERROR: Build failed!
+
+Check compiler output above for errors.
+You may need to fix source code issues or adjust CMake flags.

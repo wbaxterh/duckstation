@@ -183,6 +183,21 @@ asm(
 )");
 
 
+#elif defined(__EMSCRIPTEN__) || defined(__wasm__) || defined(__wasm32__)
+
+// WebAssembly: Use standard C setjmp/longjmp as wrappers
+#include <setjmp.h>
+
+int fastjmp_set(fastjmp_buf* buf)
+{
+  return setjmp(*reinterpret_cast<jmp_buf*>(buf->buf));
+}
+
+void fastjmp_jmp(const fastjmp_buf* buf, int ret)
+{
+  longjmp(*reinterpret_cast<jmp_buf*>(const_cast<uint8_t*>(buf->buf)), ret);
+}
+
 #else
 
 #error Unknown platform.

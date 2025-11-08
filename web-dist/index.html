@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DuckStation Web - PlayStation 1 Emulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🦆 DuckStation Web</h1>
+      <p class="subtitle">PlayStation 1 Emulator in Your Browser</p>
+    </header>
+
+    <div id="status" class="status">
+      <span id="status-text">Ready to load</span>
+      <span id="sab-status" class="sab-indicator"></span>
+    </div>
+
+    <div id="upload-section" class="upload-section">
+      <div class="file-upload">
+        <label for="bios-upload" class="upload-label">
+          <span class="upload-icon">📁</span>
+          <span>BIOS File</span>
+          <span class="file-info">(scph*.bin)</span>
+        </label>
+        <input type="file" id="bios-upload" accept=".bin" />
+        <div id="bios-name" class="file-name"></div>
+      </div>
+
+      <div class="file-upload">
+        <label for="game-upload" class="upload-label">
+          <span class="upload-icon">🎮</span>
+          <span>Game Image</span>
+          <span class="file-info">(.cue, .bin, .iso, .chd)</span>
+        </label>
+        <input type="file" id="game-upload" accept=".cue,.bin,.iso,.chd,.img" multiple />
+        <div id="game-name" class="file-name"></div>
+      </div>
+
+      <button id="boot-button" class="btn-boot" disabled>🚀 Boot Game</button>
+    </div>
+
+    <div id="canvas-container" class="canvas-container" style="display: none;">
+      <canvas id="screen" tabindex="1"></canvas>
+      <div id="fps-counter" class="fps-counter">FPS: --</div>
+    </div>
+
+    <div class="controls-legend">
+      <h3>⌨️ Keyboard Controls</h3>
+      <div class="controls-grid">
+        <div><kbd>W/A/S/D</kbd> Left Stick</div>
+        <div><kbd>Arrow Keys</kbd> D-Pad</div>
+        <div><kbd>I/J/K/L</kbd> △/□/○/✕</div>
+        <div><kbd>Q/E</kbd> L1/R1</div>
+        <div><kbd>1/3</kbd> L2/R2</div>
+        <div><kbd>Enter</kbd> Start</div>
+        <div><kbd>Backspace</kbd> Select</div>
+        <div><kbd>Esc</kbd> Pause</div>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <h3>ℹ️ System Information</h3>
+      <div id="sys-info">
+        <div><strong>SharedArrayBuffer:</strong> <span id="sab-support">Checking...</span></div>
+        <div><strong>WebGL:</strong> <span id="webgl-support">Checking...</span></div>
+        <div><strong>Audio Context:</strong> <span id="audio-support">Checking...</span></div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Built with ❤️ using Emscripten | <a href="https://github.com/stenzek/duckstation" target="_blank">DuckStation</a></p>
+      <p class="disclaimer">PlayStation and PSX are trademarks of Sony Interactive Entertainment.</p>
+    </footer>
+  </div>
+
+  <script type="module">
+    import createDuckStationModule from './duckstation/duckstation-web.js';
+
+    let Module = null;
+    let biosPath = null;
+    let gamePath = null;
+    let animationFrameId = null;
+
+    const status = document.getElementById('status-text');
+    const biosUpload = document.getElementById('bios-upload');
+    const gameUpload = document.getElementById('game-upload');
+    const biosName = document.getElementById('bios-name');
+    const gameName = document.getElementById('game-name');
+    const bootButton = document.getElementById('boot-button');
+    const canvas = document.getElementById('screen');
+    const canvasContainer = document.getElementById('canvas-container');
+    const uploadSection = document.getElementById('upload-section');
+    const fpsCounter = document.getElementById('fps-counter');
+
+    // Check browser capabilities
+    function checkCapabilities() {
+      // SharedArrayBuffer
+      const sabSupported = typeof SharedArrayBuffer !== 'undefined';
+      document.getElementById('sab-support').textContent = sabSupported ? '✅ Enabled' : '❌ Disabled';
+      document.getElementById('sab-status').textContent = sabSupported ?
+        '🟢 Threading Ready' : '🟡 Single-threaded mode';
+
+      // WebGL
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      document.getElementById('webgl-support').textContent = gl ? '✅ WebGL 2.0' : '❌ Not available';
+
+      // Audio
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+        document.getElementById('audio-support').textContent = '✅ Available';
+        audioCtx.close();
+      } catch (e) {
+        document.getElementById('audio-support').textContent = '❌ Not available';
+      }
+    }
+
+    checkCapabilities();
+
+    // File uploads
+    biosUpload.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        const file = e.target.files[0];
+        biosName.textContent = `✓ ${file.name}`;
+        biosPath = `/bios/${file.name}`;
+
+        // Read and mount to virtual FS
+        const reader = new FileReader();
+        reader.onload = async () => {
+          if (!Module) {
+            status.textContent = 'Initializing emulator...';
+            Module = await createDuckStationModule({
+              canvas: canvas,
+              locateFile: (path) => `/duckstation/${path}`,
+              print: (text) => console.log('[DuckStation]', text),
+              printErr: (text) => console.error('[DuckStation]', text),
+            });
+            status.textContent = 'Emulator ready';
+          }
+
+          // Mount BIOS file
+          Module.FS.writeFile(biosPath, new Uint8Array(reader.result));
+          Module.ccall('duckstation_load_bios', 'number', ['string'], [biosPath]);
+          status.textContent = `BIOS loaded: ${file.name}`;
+          updateBootButton();
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    });
+
+    gameUpload.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        const file = e.target.files[0];
+        gameName.textContent = `✓ ${file.name}`;
+        gamePath = `/roms/${file.name}`;
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+          if (!Module) {
+            status.textContent = 'Initializing emulator...';
+            Module = await createDuckStationModule({
+              canvas: canvas,
+              locateFile: (path) => `/duckstation/${path}`,
+            });
+            status.textContent = 'Emulator ready';
+          }
+
+          // Mount game file
+          Module.FS.writeFile(gamePath, new Uint8Array(reader.result));
+          status.textContent = `Game loaded: ${file.name}`;
+          updateBootButton();
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    });
+
+    function updateBootButton() {
+      bootButton.disabled = !(biosPath && gamePath);
+    }
+
+    // Boot game
+    bootButton.addEventListener('click', async () => {
+      if (!Module) {
+        alert('Emulator not initialized!');
+        return;
+      }
+
+      // Initialize system
+      const initResult = Module.ccall('duckstation_init', 'number', [], []);
+      if (!initResult) {
+        alert('Failed to initialize DuckStation!');
+        return;
+      }
+
+      // Boot game
+      const bootResult = Module.ccall('duckstation_boot_game', 'number', ['string'], [gamePath]);
+      if (!bootResult) {
+        alert('Failed to boot game!');
+        return;
+      }
+
+      // Hide upload UI, show canvas
+      uploadSection.style.display = 'none';
+      canvasContainer.style.display = 'flex';
+      canvas.focus();
+
+      // Start render loop
+      let lastTime = performance.now();
+      let frameCount = 0;
+
+      function mainLoop() {
+        Module.ccall('duckstation_frame', null, [], []);
+
+        // FPS counter
+        frameCount++;
+        const now = performance.now();
+        if (now - lastTime >= 1000) {
+          fpsCounter.textContent = `FPS: ${frameCount}`;
+          frameCount = 0;
+          lastTime = now;
+        }
+
+        animationFrameId = requestAnimationFrame(mainLoop);
+      }
+
+      status.textContent = '🎮 Game running...';
+      mainLoop();
+    });
+
+    // Handle page unload
+    window.addEventListener('beforeunload', () => {
+      if (Module) {
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
+        Module.ccall('duckstation_shutdown', null, [], []);
+      }
+    });
+
+    // Canvas focus for input
+    canvas.addEventListener('click', () => {
+      canvas.focus();
+    });
+  </script>
+</body>
+</html>

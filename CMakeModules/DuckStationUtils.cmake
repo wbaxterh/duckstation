@@ -27,6 +27,9 @@ function(detect_operating_system)
 		message(STATUS "Building for Linux.")
 	elseif(BSD)
 		message(STATUS "Building for *BSD.")
+	elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+		message(STATUS "Building for WebAssembly/Emscripten.")
+		set(EMSCRIPTEN TRUE PARENT_SCOPE)
 	else()
 		message(FATAL_ERROR "Unsupported platform.")
 	endif()
@@ -54,6 +57,13 @@ function(detect_compiler)
 endfunction()
 
 function(detect_architecture)
+  # WebAssembly doesn't have a traditional CPU architecture
+  if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    message(STATUS "Building for WebAssembly (no native CPU architecture).")
+    set(CPU_ARCH_WASM TRUE PARENT_SCOPE)
+    return()
+  endif()
+
   if(APPLE AND NOT "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
     # Universal binaries.
     if("x86_64" IN_LIST CMAKE_OSX_ARCHITECTURES)

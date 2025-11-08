@@ -4,7 +4,9 @@
 #include "gpu_sw_rasterizer.h"
 #include "gpu.h"
 
+#ifndef __EMSCRIPTEN__
 #include "cpuinfo.h"
+#endif
 
 #include "common/gsvector.h"
 #include "common/log.h"

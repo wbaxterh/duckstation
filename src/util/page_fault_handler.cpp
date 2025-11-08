@@ -134,7 +134,7 @@ bool PageFaultHandler::Install(Error* error)
   return true;
 }
 
-#elif !defined(__ANDROID__)
+#elif !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
 
 namespace PageFaultHandler {
 static void SignalHandler(int sig, siginfo_t* info, void* ctx);
@@ -255,6 +255,15 @@ bool PageFaultHandler::Install(Error* error)
 #endif
 
   s_installed = true;
+  return true;
+}
+
+#else
+
+// Android and WebAssembly stub implementation - no page fault handling support
+bool PageFaultHandler::Install(Error* error)
+{
+  // Page fault handling not supported on Android/WebAssembly
   return true;
 }
 

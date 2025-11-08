@@ -183,7 +183,7 @@ struct LoadstoreBackpatchInfo
   MemoryAccessSize AccessSize() const { return static_cast<MemoryAccessSize>(size); }
   u32 AccessSizeInBytes() const { return 1u << size; }
 };
-#ifdef CPU_ARCH_ARM32
+#if defined(CPU_ARCH_ARM32) || defined(CPU_ARCH_WASM)
 static_assert(sizeof(LoadstoreBackpatchInfo) == 20);
 #else
 static_assert(sizeof(LoadstoreBackpatchInfo) == 24);

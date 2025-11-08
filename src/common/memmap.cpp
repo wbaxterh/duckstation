@@ -887,6 +887,10 @@ bool SharedMemoryMappingArea::Unmap(void* map_base, size_t map_size)
 
 void* MemMap::AllocateJITMemory(size_t size)
 {
+#if defined(CPU_ARCH_WASM)
+  // WebAssembly doesn't support JIT compilation
+  return nullptr;
+#else
   const u8* base =
     reinterpret_cast<const u8*>(Common::AlignDownPow2(reinterpret_cast<uintptr_t>(GetBaseAddress()), HOST_PAGE_SIZE));
   u8* ptr = nullptr;
@@ -975,4 +979,5 @@ void* MemMap::AllocateJITMemory(size_t size)
            (std::abs(static_cast<ptrdiff_t>(ptr - base)) + (1024 * 1024 - 1)) / (1024 * 1024));
 
   return ptr;
+#endif
 }

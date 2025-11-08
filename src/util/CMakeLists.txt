@@ -1,8 +1,5 @@
-add_library(util
-  animated_image.cpp
-  animated_image.h
-  audio_stream.cpp
-  audio_stream.h
+# Common sources for all platforms
+set(UTIL_SOURCES
   cd_image.cpp
   cd_image.h
   cd_image_cue.cpp
@@ -15,14 +12,10 @@ add_library(util
   cd_image_mds.cpp
   cd_image_pbp.cpp
   cd_image_ppf.cpp
-  compress_helpers.cpp
-  compress_helpers.h
   cue_parser.cpp
   cue_parser.h
   elf_file.cpp
   elf_file.h
-  gpu_device.cpp
-  gpu_device.h
   gpu_framebuffer_manager.h
   gpu_shader_cache.cpp
   gpu_shader_cache.h
@@ -32,8 +25,6 @@ add_library(util
   host.h
   http_downloader.cpp
   http_downloader.h
-  image.cpp
-  image.h
   imgui_fullscreen.cpp
   imgui_fullscreen.h
   imgui_manager.cpp
@@ -75,11 +66,55 @@ add_library(util
   window_info.h
 )
 
+# Desktop-only sources (require libraries not available on Emscripten)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  list(APPEND UTIL_SOURCES
+    animated_image.cpp
+    animated_image.h
+    audio_stream.cpp
+    audio_stream.h
+    compress_helpers.cpp
+    compress_helpers.h
+    gpu_device.cpp
+    gpu_device.h
+    image.cpp
+    image.h
+  )
+else()
+  # Emscripten uses web-specific implementations
+  list(APPEND UTIL_SOURCES
+    animated_image_web.cpp
+    animated_image.h
+    audio_stream_web.cpp
+    audio_stream.h
+    compress_helpers_web.cpp
+    compress_helpers.h
+    gpu_device.cpp
+    gpu_device_web_minimal.cpp
+    gpu_device.h
+    http_downloader_web.cpp
+    http_downloader.h
+    image_web.cpp
+    image.h
+    platform_misc_web.cpp
+    platform_misc.h
+  )
+endif()
+
+add_library(util ${UTIL_SOURCES})
+
 target_precompile_headers(util PRIVATE "pch.h")
 target_include_directories(util PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")
 target_include_directories(util PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
 target_link_libraries(util PUBLIC common simpleini imgui)
-target_link_libraries(util PRIVATE libchdr lzma JPEG::JPEG PNG::PNG WebP::libwebp plutosvg::plutosvg ZLIB::ZLIB SoundTouch::SoundTouchDLL xxhash zstd::libzstd_shared reshadefx)
+
+# For Emscripten, skip most third-party libraries as they're provided by Emscripten or not needed
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  target_link_libraries(util PRIVATE libchdr lzma JPEG::JPEG PNG::PNG WebP::libwebp plutosvg::plutosvg ZLIB::ZLIB SoundTouch::SoundTouchDLL xxhash zstd::libzstd_shared reshadefx)
+else()
+  # For Emscripten, only link minimal required libraries
+  target_link_libraries(util PRIVATE libchdr lzma xxhash reshadefx)
+endif()
 
 if(ENABLE_X11)
   target_sources(util PRIVATE
@@ -122,7 +157,7 @@ if(ENABLE_OPENGL)
     )
   endif()
 
-  if(LINUX OR BSD OR ANDROID)
+  if(LINUX OR BSD OR ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     target_sources(util PRIVATE
       opengl_context_egl.cpp
       opengl_context_egl.h
@@ -184,11 +219,14 @@ if(ENABLE_VULKAN)
 endif()
 
 # shaderc/spirv-cross is loaded dynamically to reduce module loads on startup.
-get_target_property(SHADERC_INCLUDE_DIR Shaderc::shaderc_shared INTERFACE_INCLUDE_DIRECTORIES)
-get_target_property(SPIRV_CROSS_INCLUDE_DIR spirv-cross-c-shared INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(util PUBLIC ${SHADERC_INCLUDE_DIR} ${SPIRV_CROSS_INCLUDE_DIR})
+# Skip for Emscripten builds - shader compilation happens differently for WebGL
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  get_target_property(SHADERC_INCLUDE_DIR Shaderc::shaderc_shared INTERFACE_INCLUDE_DIRECTORIES)
+  get_target_property(SPIRV_CROSS_INCLUDE_DIR spirv-cross-c-shared INTERFACE_INCLUDE_DIRECTORIES)
+  target_include_directories(util PUBLIC ${SHADERC_INCLUDE_DIR} ${SPIRV_CROSS_INCLUDE_DIR})
+endif()
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   target_sources(util PRIVATE
     cubeb_audio_stream.cpp
     sdl_audio_stream.cpp
@@ -209,6 +247,9 @@ if(NOT ANDROID)
     SDL3::SDL3
   )
   # FFmpeg loaded dynamically on demand.
+  target_include_directories(util PUBLIC ${FFMPEG_INCLUDE_DIRS})
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  # Emscripten uses Web Audio API and doesn't need SDL/cubeb
   target_include_directories(util PUBLIC ${FFMPEG_INCLUDE_DIRS})
 endif()
 
@@ -272,7 +313,7 @@ elseif(APPLE)
   find_library(QUARTZCORE_LIBRARY QuartzCore)
   target_link_libraries(util PRIVATE ${METAL_LIBRARY} ${QUARTZCORE_LIBRARY} ${IOK_LIBRARY})
   set_source_files_properties(${MAC_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS TRUE)
-elseif(NOT ANDROID)
+elseif(NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   target_sources(util PRIVATE
     platform_misc_unix.cpp
   )
@@ -284,7 +325,7 @@ elseif(NOT ANDROID)
   endif()
 endif()
 
-if(NOT WIN32 AND NOT ANDROID)
+if(NOT WIN32 AND NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   target_sources(util PRIVATE
     http_downloader_curl.cpp
   )

@@ -19,8 +19,10 @@
 #include "common/timer.h"
 
 #include "fmt/format.h"
+#ifndef __EMSCRIPTEN__
 #include "shaderc/shaderc.h"
 #include "spirv_cross_c.h"
+#endif
 #include "xxhash.h"
 
 LOG_CHANNEL(GPUDevice);
@@ -1357,6 +1359,8 @@ std::unique_ptr<GPUDevice> GPUDevice::CreateDeviceForAPI(RenderAPI api)
   }
 }
 
+#ifndef __EMSCRIPTEN__
+
 #ifndef _WIN32
 // Use a duckstation-suffixed shaderc name to avoid conflicts and loading another shaderc, e.g. from the Vulkan SDK.
 #define SHADERC_LIB_NAME "shaderc_ds"
@@ -2062,3 +2066,5 @@ std::unique_ptr<GPUShader> GPUDevice::TranspileAndCreateShaderFromSource(
 
   return CreateShaderFromSource(stage, target_language, dest_source, entry_point, out_binary, error);
 }
+
+#endif // !__EMSCRIPTEN__

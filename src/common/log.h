@@ -191,6 +191,16 @@ ALWAYS_INLINE void FastWrite(Channel channel, const char* functionName, Level le
 // log wrappers
 #define LOG_CHANNEL(name) [[maybe_unused]] static constexpr Log::Channel ___LogChannel___ = Log::Channel::name;
 
+#ifdef __EMSCRIPTEN__
+// WebAssembly: Disable all logging to avoid memory access errors in logging buffer
+#define ERROR_LOG(...) do {} while(0)
+#define WARNING_LOG(...) do {} while(0)
+#define INFO_LOG(...) do {} while(0)
+#define VERBOSE_LOG(...) do {} while(0)
+#define DEV_LOG(...) do {} while(0)
+#define DEBUG_LOG(...) do {} while(0)
+#define TRACE_LOG(...) do {} while(0)
+#else
 #define ERROR_LOG(...) Log::FastWrite(___LogChannel___, __func__, Log::Level::Error, __VA_ARGS__)
 #define WARNING_LOG(...) Log::FastWrite(___LogChannel___, __func__, Log::Level::Warning, __VA_ARGS__)
 #define INFO_LOG(...) Log::FastWrite(___LogChannel___, Log::Level::Info, __VA_ARGS__)
@@ -210,8 +220,19 @@ ALWAYS_INLINE void FastWrite(Channel channel, const char* functionName, Level le
   {                                                                                                                    \
   } while (0)
 #endif
+#endif
 
 // clang-format off
+#ifdef __EMSCRIPTEN__
+// WebAssembly: Disable all color logging to avoid memory access errors
+#define ERROR_COLOR_LOG(colour, ...) do {} while(0)
+#define WARNING_COLOR_LOG(colour, ...) do {} while(0)
+#define INFO_COLOR_LOG(colour, ...) do {} while(0)
+#define VERBOSE_COLOR_LOG(colour, ...) do {} while(0)
+#define DEV_COLOR_LOG(colour, ...) do {} while(0)
+#define DEBUG_COLOR_LOG(colour, ...) do {} while(0)
+#define TRACE_COLOR_LOG(colour, ...) do {} while(0)
+#else
 #define ERROR_COLOR_LOG(colour, ...) Log::FastWrite(___LogChannel___, __func__, Log::Level::Error, Log::Color::colour, __VA_ARGS__)
 #define WARNING_COLOR_LOG(colour, ...) Log::FastWrite(___LogChannel___, __func__, Log::Level::Warning, Log::Color::colour, __VA_ARGS__)
 #define INFO_COLOR_LOG(colour, ...) Log::FastWrite(___LogChannel___, Log::Level::Info, Log::Color::colour, __VA_ARGS__)
@@ -231,5 +252,24 @@ ALWAYS_INLINE void FastWrite(Channel channel, const char* functionName, Level le
   {                                                                                                                    \
   } while (0)
 #endif
+#endif
 
 // clang-format on
+
+// Disable all logging for WebAssembly builds - logging buffer causes memory access errors
+#ifdef __EMSCRIPTEN__
+#undef ERROR_LOG
+#undef WARNING_LOG  
+#undef INFO_LOG
+#undef VERBOSE_LOG
+#undef DEV_LOG
+#undef DEBUG_LOG
+#undef TRACE_LOG
+#define ERROR_LOG(...) do {} while(0)
+#define WARNING_LOG(...) do {} while(0)
+#define INFO_LOG(...) do {} while(0)
+#define VERBOSE_LOG(...) do {} while(0)
+#define DEV_LOG(...) do {} while(0)
+#define DEBUG_LOG(...) do {} while(0)
+#define TRACE_LOG(...) do {} while(0)
+#endif

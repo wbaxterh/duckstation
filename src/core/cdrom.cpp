@@ -551,8 +551,12 @@ void CDROM::Initialize()
 {
   s_state.disc_region = DiscRegion::NonPS1;
 
+#ifndef __EMSCRIPTEN__
+  // WebAssembly does not support threading, so disable async CD-ROM reader
   if (g_settings.cdrom_readahead_sectors > 0)
     s_reader.StartThread(g_settings.cdrom_readahead_sectors);
+#else
+#endif
 
   Reset();
 }

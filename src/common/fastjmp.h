@@ -22,6 +22,9 @@ struct fastjmp_buf
   static constexpr std::size_t BUF_SIZE = 24;
 #elif defined(__riscv) && __riscv_xlen == 64
   static constexpr std::size_t BUF_SIZE = 216;
+#elif defined(__EMSCRIPTEN__) || defined(__wasm__) || defined(__wasm32__)
+  // WebAssembly uses standard C setjmp/longjmp
+  static constexpr std::size_t BUF_SIZE = 64;
 #else
 #error Unknown architecture.
 #endif

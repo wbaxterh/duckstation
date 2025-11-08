@@ -1,0 +1,33 @@
+// log wrappers
+#define LOG_CHANNEL(name) [[maybe_unused]] static constexpr Log::Channel ___LogChannel___ = Log::Channel::name;
+
+#ifdef __EMSCRIPTEN__
+// WebAssembly: Disable all logging to avoid memory access errors in logging buffer
+#define ERROR_LOG(...) do {} while(0)
+#define WARNING_LOG(...) do {} while(0)
+#define INFO_LOG(...) do {} while(0)
+#define VERBOSE_LOG(...) do {} while(0)
+#define DEV_LOG(...) do {} while(0)
+#define DEBUG_LOG(...) do {} while(0)
+#define TRACE_LOG(...) do {} while(0)
+#else
+#define ERROR_LOG(...) Log::FastWrite(___LogChannel___, __func__, Log::Level::Error, __VA_ARGS__)
+#define WARNING_LOG(...) Log::FastWrite(___LogChannel___, __func__, Log::Level::Warning, __VA_ARGS__)
+#define INFO_LOG(...) Log::FastWrite(___LogChannel___, Log::Level::Info, __VA_ARGS__)
+#define VERBOSE_LOG(...) Log::FastWrite(___LogChannel___, Log::Level::Verbose, __VA_ARGS__)
+#define DEV_LOG(...) Log::FastWrite(___LogChannel___, Log::Level::Dev, __VA_ARGS__)
+
+#if defined(_DEBUG) || defined(_DEVEL)
+#define DEBUG_LOG(...) Log::FastWrite(___LogChannel___, Log::Level::Debug, __VA_ARGS__)
+#define TRACE_LOG(...) Log::FastWrite(___LogChannel___, Log::Level::Trace, __VA_ARGS__)
+#else
+#define DEBUG_LOG(...)                                                                                                 \
+  do                                                                                                                   \
+  {                                                                                                                    \
+  } while (0)
+#define TRACE_LOG(...)                                                                                                 \
+  do                                                                                                                   \
+  {                                                                                                                    \
+  } while (0)
+#endif
+#endif

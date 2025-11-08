@@ -1319,6 +1319,7 @@ void CPU::CodeCache::CompileOrRevalidateBlock(u32 start_pc)
 
   // Ensure we're not going to run out of space while compiling this block.
   // We could definitely do better here...
+#ifdef ENABLE_RECOMPILER
   const u32 block_size = static_cast<u32>(s_block_instructions.size());
   const u32 free_code_space = GetFreeCodeSpace();
   const u32 free_far_code_space = GetFreeFarCodeSpace();
@@ -1329,6 +1330,7 @@ void CPU::CodeCache::CompileOrRevalidateBlock(u32 start_pc)
     ERROR_LOG("Out of code space while compiling {:08X}. Resetting code cache.", start_pc);
     CodeCache::Reset();
   }
+#endif
 
   if ((block = CreateBlock(start_pc, s_block_instructions, metadata)) == nullptr || block->size == 0 ||
       !CompileBlock(block))

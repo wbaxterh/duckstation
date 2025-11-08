@@ -162,6 +162,8 @@ struct dependent_int_false : std::false_type
 #define CPU_ARCH_ARM32 1
 #elif defined(__riscv) && __riscv_xlen == 64
 #define CPU_ARCH_RISCV64 1
+#elif defined(__EMSCRIPTEN__) || defined(__wasm__) || defined(__wasm32__)
+#define CPU_ARCH_WASM 1
 #else
 #error Unknown architecture.
 #endif
@@ -182,12 +184,16 @@ struct dependent_int_false : std::false_type
 #define CPU_ARCH_STR "arm64"
 #elif defined(CPU_ARCH_RISCV64)
 #define CPU_ARCH_STR "riscv64"
+#elif defined(CPU_ARCH_WASM)
+#define CPU_ARCH_STR "wasm32"
 #else
 #define CPU_ARCH_STR "Unknown"
 #endif
 
 // OS detection.
-#if defined(_WIN32)
+#if defined(__EMSCRIPTEN__)
+#define TARGET_OS_STR "Emscripten"
+#elif defined(_WIN32)
 #define TARGET_OS_STR "Windows"
 #elif defined(__ANDROID__)
 #define TARGET_OS_STR "Android"

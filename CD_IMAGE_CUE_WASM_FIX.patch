@@ -1,0 +1,40 @@
+--- a/src/util/cd_image_cue.cpp
++++ b/src/util/cd_image_cue.cpp
+@@ -194,6 +194,22 @@ u64 BinaryTrackFileInterface::GetDiskSize()
+
+ bool BinaryTrackFileInterface::Read(void* buffer, u64 offset, u32 size, Error* error)
+ {
++  INFO_LOG("BinaryTrackFileInterface::Read: offset={}, size={}, filename={}", offset, size, m_filename);
++
++#ifdef __EMSCRIPTEN__
++  // WebAssembly: Read file size first to validate bounds
++  const u64 file_size = GetSize();
++  if (offset + size > file_size)
++  {
++    Error::SetStringFmt(error, "Read beyond file bounds: offset={}, size={}, file_size={}", offset, size, file_size);
++    ERROR_LOG("Read beyond file bounds: offset={}, size={}, file_size={}", offset, size, file_size);
++    return false;
++  }
++
++  INFO_LOG("File size check passed: offset={}, size={}, file_size={}", offset, size, file_size);
++#endif
++
+   if (m_file_position != offset)
+   {
+     if (!FileSystem::FSeek64(m_file.get(), static_cast<s64>(offset), SEEK_SET, error)) [[unlikely]]
+@@ -202,6 +218,7 @@ bool BinaryTrackFileInterface::Read(void* buffer, u64 offset, u32 size, Error*
+     m_file_position = offset;
+   }
+
++  INFO_LOG("About to fread: size={}", size);
+   if (std::fread(buffer, size, 1, m_file.get()) != 1) [[unlikely]]
+   {
+     Error::SetErrno(error, "fread() failed: ", errno);
+@@ -211,6 +228,7 @@ bool BinaryTrackFileInterface::Read(void* buffer, u64 offset, u32 size, Error*
+     return false;
+   }
+
++  INFO_LOG("fread SUCCESS");
+   m_file_position += size;
+   return true;
+ }

@@ -37,7 +37,7 @@
 #include <mach/mach_time.h>
 #include <mach/semaphore.h>
 #include <mach/task.h>
-#else
+#elif !defined(__EMSCRIPTEN__)
 #include <pthread_np.h>
 #endif
 #endif
@@ -537,8 +537,10 @@ u64 Threading::GetThreadCpuTime()
   return user.u64time + kernel.u64time;
 #elif defined(__APPLE__)
   return getthreadtime(pthread_mach_thread_np(pthread_self()));
-#else
+#elif defined(__linux__) || defined(__FreeBSD__)
   return get_thread_time(nullptr);
+#else
+  return 0;
 #endif
 }
 
@@ -620,8 +622,11 @@ void Threading::SetNameOfCurrentThread(const char* name)
   prctl(PR_SET_NAME, name, 0, 0, 0);
 #elif defined(__APPLE__)
   pthread_setname_np(name);
-#else
+#elif !defined(__EMSCRIPTEN__)
   pthread_set_name_np(pthread_self(), name);
+#else
+  // Emscripten doesn't support thread naming
+  (void)name;
 #endif
 }
 

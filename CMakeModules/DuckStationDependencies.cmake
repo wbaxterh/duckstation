@@ -9,6 +9,27 @@ endif()
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+# For Emscripten/WebAssembly builds, most dependencies are provided by Emscripten itself
+# or are not needed for the web frontend. Skip dependency detection.
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  message(STATUS "Emscripten build detected - skipping desktop dependencies")
+  message(STATUS "Using Emscripten-provided libraries (zlib, SDL2, OpenGL ES, etc.)")
+
+  # Create dummy targets for compatibility - these libraries are provided by Emscripten or not needed
+  add_library(ZLIB::ZLIB INTERFACE IMPORTED)
+  set(ZLIB_FOUND TRUE)
+  set(ZLIB_LIBRARIES "")
+  set(ZLIB_INCLUDE_DIRS "")
+
+  # libzip is not needed for web builds (used for PS2 memory card imports)
+  add_library(libzip::zip INTERFACE IMPORTED)
+
+  # Set FFMPEG to use bundled headers
+  set(FFMPEG_INCLUDE_DIRS "${CMAKE_SOURCE_DIR}/dep/ffmpeg/include")
+
+  return()
+endif()
+
 # pkg-config gets pulled transitively on some platforms.
 if(NOT WIN32 AND NOT APPLE)
   find_package(PkgConfig REQUIRED)

@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#if !defined(__EMSCRIPTEN__)
 #include "zip.h"
 
 namespace ZipHelpers {
@@ -234,3 +235,42 @@ inline std::optional<std::vector<u8>> ReadBinaryFileInZip(zip_file_t* file, u32 
 }
 
 } // namespace ZipHelpers
+
+#else // __EMSCRIPTEN__
+
+// WebAssembly stub - no ZIP support
+namespace ZipHelpers {
+
+// Stub deleter functions
+inline void StubDeleter(void*) {}
+
+// Wrapper struct to make unique_ptr default-constructible
+struct ManagedZipDeleter
+{
+  void operator()(void*) const {}
+};
+
+// Stub types for compilation (using custom deleter to allow default construction)
+using ManagedZipT = std::unique_ptr<void, ManagedZipDeleter>;
+using ManagedZipFileT = std::unique_ptr<void, ManagedZipDeleter>;
+
+// Stub function implementations
+inline ManagedZipT OpenManagedZipBuffer(const void* buffer, size_t size, int flags, bool free_buffer,
+                                        Error* error = nullptr)
+{
+  Error::SetStringView(error, "ZIP support is not available in WebAssembly builds");
+  if (free_buffer)
+    std::free(const_cast<void*>(buffer));
+  return ManagedZipT();
+}
+
+inline std::optional<std::string> ReadFileInZipToString(void* zip, const char* name, bool case_sensitive = true,
+                                                        Error* error = nullptr)
+{
+  Error::SetStringView(error, "ZIP support is not available in WebAssembly builds");
+  return std::nullopt;
+}
+
+} // namespace ZipHelpers
+
+#endif // !__EMSCRIPTEN__

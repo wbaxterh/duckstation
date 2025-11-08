@@ -1,0 +1,12 @@
+194a195,196
+>   INFO_LOG("BinaryTrackFileInterface::Read START: offset={}, size={}", offset, size);
+> 
+204a207
+>   INFO_LOG("About to call fread: buffer={:p}, size={}", buffer, size);
+211a215
+>   INFO_LOG("fread SUCCESS: read {} bytes", size);
+865a870,871
+>   INFO_LOG("ReadSectorFromIndex: file_index={}, file_position={}, sector_size={}", 
+>            index.file_index, file_position, index.file_sector_size);
+890a897
+>   INFO_LOG("OpenCueSheetImage: path={}", path);

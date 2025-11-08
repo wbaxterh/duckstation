@@ -46,3 +46,19 @@ __pycache__
 # other repos
 /android
 
+# web build artifacts
+/.emsdk/
+/build-web/
+/web-dist/duckstation/*.wasm
+/web-dist/duckstation/*.js
+/web-dist/duckstation/*.data
+/web-dist/duckstation/*.worker.js
+
+# development assets (BIOS/ROMs - don't commit!)
+/dev-assets/
+*.bin
+*.cue
+*.iso
+*.img
+*.chd
+

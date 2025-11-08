@@ -279,7 +279,7 @@ void CrashHandler::WriteDumpForCaller(std::string_view message)
   WriteMinidumpAndCallstack(nullptr, message);
 }
 
-#elif !defined(__APPLE__) && !defined(__ANDROID__)
+#elif !defined(__APPLE__) && !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
 
 #include <backtrace.h>
 #include <cstdarg>

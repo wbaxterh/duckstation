@@ -74,7 +74,9 @@
 #include "IconsFontAwesome6.h"
 #include "IconsPromptFont.h"
 
+#ifndef __EMSCRIPTEN__
 #include "cpuinfo.h"
+#endif
 #include "fmt/chrono.h"
 #include "fmt/format.h"
 #include "imgui.h"
@@ -95,7 +97,7 @@ LOG_CHANNEL(System);
 #include <Objbase.h>
 #endif
 
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
 #define ENABLE_DISCORD_PRESENCE 1
 #define ENABLE_GDB_SERVER 1
 #define ENABLE_SOCKET_MULTIPLEXER 1
@@ -358,6 +360,7 @@ static TinyString GetTimestampStringForFileName()
 
 bool System::PerformEarlyHardwareChecks(Error* error)
 {
+#ifndef __EMSCRIPTEN__
   // This shouldn't fail... if it does, just hope for the best.
   cpuinfo_initialize();
 
@@ -381,6 +384,7 @@ bool System::PerformEarlyHardwareChecks(Error* error)
   }
 #endif
 #endif
+#endif // !__EMSCRIPTEN__
 
 #ifndef DYNAMIC_HOST_PAGE_SIZE
   // Check page size. If it doesn't match, it is a fatal error.
@@ -411,6 +415,7 @@ bool System::PerformEarlyHardwareChecks(Error* error)
 
 void System::CheckCacheLineSize()
 {
+#ifndef __EMSCRIPTEN__
   u32 max_line_size = 0;
   if (cpuinfo_initialize())
   {
@@ -449,6 +454,7 @@ void System::CheckCacheLineSize()
       "Cache line size mismatch. This build was compiled with {} byte lines, but the system has {} byte lines.",
       HOST_CACHE_LINE_SIZE, max_line_size);
   }
+#endif // !__EMSCRIPTEN__
 }
 
 void System::LogStartupInformation()
@@ -461,12 +467,14 @@ void System::LogStartupInformation()
   INFO_LOG("DuckStation for {} ({}){}", TARGET_OS_STR, CPU_ARCH_STR, suffix);
   INFO_LOG("Version: {} [{}]", g_scm_tag_str, g_scm_branch_str);
   INFO_LOG("SCM Timestamp: {}", g_scm_date_str);
+#ifndef __EMSCRIPTEN__
   if (const cpuinfo_package* package = cpuinfo_initialize() ? cpuinfo_get_package(0) : nullptr) [[likely]]
   {
     INFO_LOG("Host CPU: {}", package->name);
     INFO_LOG("CPU has {} logical processor(s) and {} core(s) across {} cluster(s).", package->processor_count,
              package->core_count, package->cluster_count);
   }
+#endif // !__EMSCRIPTEN__
 
 #ifdef DYNAMIC_HOST_PAGE_SIZE
   INFO_LOG("Host Page Size: {} bytes", HOST_PAGE_SIZE);

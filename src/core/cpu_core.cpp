@@ -83,20 +83,38 @@ static void ExecuteInstruction();
 template<PGXPMode pgxp_mode, bool debug>
 [[noreturn]] static void ExecuteImpl();
 
+// For JIT builds, these are implemented in cpu_recompiler.cpp as static functions
+// For WebAssembly, use static inline wrappers that forward to namespace implementations below
+#ifndef __EMSCRIPTEN__
 static bool FetchInstruction();
 static bool FetchInstructionForInterpreterFallback();
-template<bool add_ticks, bool icache_read = false, u32 word_count = 1, bool raise_exceptions>
-static bool DoInstructionRead(PhysicalMemoryAddress address, u32* data);
-template<MemoryAccessType type, MemoryAccessSize size>
-static bool DoSafeMemoryAccess(VirtualMemoryAddress address, u32& value);
-template<MemoryAccessType type, MemoryAccessSize size>
-static bool DoAlignmentCheck(VirtualMemoryAddress address);
 static bool ReadMemoryByte(VirtualMemoryAddress addr, u8* value);
 static bool ReadMemoryHalfWord(VirtualMemoryAddress addr, u16* value);
 static bool ReadMemoryWord(VirtualMemoryAddress addr, u32* value);
 static bool WriteMemoryByte(VirtualMemoryAddress addr, u32 value);
 static bool WriteMemoryHalfWord(VirtualMemoryAddress addr, u32 value);
 static bool WriteMemoryWord(VirtualMemoryAddress addr, u32 value);
+#else
+// Static inline wrappers that forward to the namespace-level implementations
+// (defined at lines 2903-3610 in second CPU namespace block)
+// These provide static linkage while calling the non-static implementations
+// Use ::CPU:: to force global namespace resolution and avoid recursion
+static inline bool FetchInstruction() { return ::CPU::FetchInstruction(); }
+static inline bool FetchInstructionForInterpreterFallback() { return ::CPU::FetchInstructionForInterpreterFallback(); }
+static inline bool ReadMemoryByte(VirtualMemoryAddress addr, u8* value) { return ::CPU::ReadMemoryByte(addr, value); }
+static inline bool ReadMemoryHalfWord(VirtualMemoryAddress addr, u16* value) { return ::CPU::ReadMemoryHalfWord(addr, value); }
+static inline bool ReadMemoryWord(VirtualMemoryAddress addr, u32* value) { return ::CPU::ReadMemoryWord(addr, value); }
+static inline bool WriteMemoryByte(VirtualMemoryAddress addr, u32 value) { return ::CPU::WriteMemoryByte(addr, value); }
+static inline bool WriteMemoryHalfWord(VirtualMemoryAddress addr, u32 value) { return ::CPU::WriteMemoryHalfWord(addr, value); }
+static inline bool WriteMemoryWord(VirtualMemoryAddress addr, u32 value) { return ::CPU::WriteMemoryWord(addr, value); }
+#endif
+
+template<bool add_ticks, bool icache_read = false, u32 word_count = 1, bool raise_exceptions>
+static bool DoInstructionRead(PhysicalMemoryAddress address, u32* data);
+template<MemoryAccessType type, MemoryAccessSize size>
+static bool DoSafeMemoryAccess(VirtualMemoryAddress address, u32& value);
+template<MemoryAccessType type, MemoryAccessSize size>
+static bool DoAlignmentCheck(VirtualMemoryAddress address);
 
 constinit State g_state;
 bool TRACE_EXECUTION = false;
@@ -2686,6 +2704,8 @@ template void CPU::CodeCache::InterpretUncachedBlock<PGXPMode::Disabled>();
 template void CPU::CodeCache::InterpretUncachedBlock<PGXPMode::Memory>();
 template void CPU::CodeCache::InterpretUncachedBlock<PGXPMode::CPU>();
 
+#ifdef ENABLE_RECOMPILER
+
 bool CPU::RecompilerThunks::InterpretInstruction()
 {
   g_state.exception_raised = false;
@@ -2881,7 +2901,14 @@ ALWAYS_INLINE_RELEASE static u32 ReadICache(VirtualMemoryAddress address)
 }
 } // namespace CPU
 
+// For WebAssembly, these functions need to be non-inline namespace functions
+// For other platforms with inline, they're in the CPU namespace with qualifier
+#ifdef __EMSCRIPTEN__
+namespace CPU {
+bool FetchInstruction()
+#else
 ALWAYS_INLINE_RELEASE bool CPU::FetchInstruction()
+#endif
 {
   DebugAssert(Common::IsAlignedPow2(g_state.npc, 4));
 
@@ -2926,7 +2953,11 @@ ALWAYS_INLINE_RELEASE bool CPU::FetchInstruction()
   return true;
 }
 
+#ifdef __EMSCRIPTEN__
+bool FetchInstructionForInterpreterFallback()
+#else
 bool CPU::FetchInstructionForInterpreterFallback()
+#endif
 {
   if (!Common::IsAlignedPow2(g_state.npc, 4)) [[unlikely]]
   {
@@ -3456,7 +3487,11 @@ static void MemoryBreakpoint(MemoryAccessType type, MemoryAccessSize size, Virtu
 #define MEMORY_BREAKPOINT(type, size, addr, value)
 #endif
 
+#ifdef __EMSCRIPTEN__
+bool ReadMemoryByte(VirtualMemoryAddress addr, u8* value)
+#else
 bool CPU::ReadMemoryByte(VirtualMemoryAddress addr, u8* value)
+#endif
 {
   *value = Truncate8(GetMemoryReadHandler(addr, MemoryAccessSize::Byte)(addr));
   if (g_state.bus_error) [[unlikely]]
@@ -3470,7 +3505,11 @@ bool CPU::ReadMemoryByte(VirtualMemoryAddress addr, u8* value)
   return true;
 }
 
+#ifdef __EMSCRIPTEN__
+bool ReadMemoryHalfWord(VirtualMemoryAddress addr, u16* value)
+#else
 bool CPU::ReadMemoryHalfWord(VirtualMemoryAddress addr, u16* value)
+#endif
 {
   if (!DoAlignmentCheck<MemoryAccessType::Read, MemoryAccessSize::HalfWord>(addr))
     return false;
@@ -3487,7 +3526,11 @@ bool CPU::ReadMemoryHalfWord(VirtualMemoryAddress addr, u16* value)
   return true;
 }
 
+#ifdef __EMSCRIPTEN__
+bool ReadMemoryWord(VirtualMemoryAddress addr, u32* value)
+#else
 bool CPU::ReadMemoryWord(VirtualMemoryAddress addr, u32* value)
+#endif
 {
   if (!DoAlignmentCheck<MemoryAccessType::Read, MemoryAccessSize::Word>(addr))
     return false;
@@ -3504,7 +3547,11 @@ bool CPU::ReadMemoryWord(VirtualMemoryAddress addr, u32* value)
   return true;
 }
 
+#ifdef __EMSCRIPTEN__
+bool WriteMemoryByte(VirtualMemoryAddress addr, u32 value)
+#else
 bool CPU::WriteMemoryByte(VirtualMemoryAddress addr, u32 value)
+#endif
 {
   MEMORY_BREAKPOINT(MemoryAccessType::Write, MemoryAccessSize::Byte, addr, value);
 
@@ -3519,7 +3566,11 @@ bool CPU::WriteMemoryByte(VirtualMemoryAddress addr, u32 value)
   return true;
 }
 
+#ifdef __EMSCRIPTEN__
+bool WriteMemoryHalfWord(VirtualMemoryAddress addr, u32 value)
+#else
 bool CPU::WriteMemoryHalfWord(VirtualMemoryAddress addr, u32 value)
+#endif
 {
   MEMORY_BREAKPOINT(MemoryAccessType::Write, MemoryAccessSize::HalfWord, addr, value);
 
@@ -3537,7 +3588,11 @@ bool CPU::WriteMemoryHalfWord(VirtualMemoryAddress addr, u32 value)
   return true;
 }
 
+#ifdef __EMSCRIPTEN__
+bool WriteMemoryWord(VirtualMemoryAddress addr, u32 value)
+#else
 bool CPU::WriteMemoryWord(VirtualMemoryAddress addr, u32 value)
+#endif
 {
   MEMORY_BREAKPOINT(MemoryAccessType::Write, MemoryAccessSize::Word, addr, value);
 
@@ -3554,6 +3609,10 @@ bool CPU::WriteMemoryWord(VirtualMemoryAddress addr, u32 value)
 
   return true;
 }
+
+#ifdef __EMSCRIPTEN__
+} // namespace CPU
+#endif
 
 u64 CPU::RecompilerThunks::ReadMemoryByte(u32 address)
 {
@@ -3698,5 +3757,7 @@ void CPU::RecompilerThunks::UncheckedWriteMemoryWord(u32 address, u32 value)
   MEMORY_BREAKPOINT(MemoryAccessType::Write, MemoryAccessSize::Word, address, value);
   GetMemoryWriteHandler(address, MemoryAccessSize::Word)(address, value);
 }
+
+#endif // ENABLE_RECOMPILER
 
 #undef MEMORY_BREAKPOINT

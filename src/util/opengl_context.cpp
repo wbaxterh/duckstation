@@ -23,6 +23,7 @@
 #include "opengl_context_egl_android.h"
 #else
 #ifdef ENABLE_EGL
+#include "opengl_context_egl.h"
 #ifdef ENABLE_WAYLAND
 #include "opengl_context_egl_wayland.h"
 #endif

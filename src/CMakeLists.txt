@@ -23,3 +23,8 @@ if(BUILD_TESTS)
   add_subdirectory(common-tests EXCLUDE_FROM_ALL)
   add_subdirectory(util-tests EXCLUDE_FROM_ALL)
 endif()
+
+# Web frontend (Emscripten/WASM build)
+if(EMSCRIPTEN)
+  add_subdirectory(duckstation-web)
+endif()

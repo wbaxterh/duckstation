@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DuckStation WebAssembly - Tony Hawk's Pro Skater</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #00d4ff;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        #gameCanvas {
+            display: block;
+            margin: 20px auto;
+            background: #000;
+            border: 2px solid #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            max-width: 100%;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .status {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #00d4ff;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .status.error {
+            background: rgba(255, 68, 68, 0.1);
+            border-left-color: #ff4444;
+            color: #ff8888;
+        }
+
+        .status.success {
+            background: rgba(68, 255, 68, 0.1);
+            border-left-color: #44ff44;
+            color: #88ff88;
+        }
+
+        button {
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .file-input {
+            margin: 10px 0;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px 0;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        input[type="file"] {
+            display: block;
+            margin: 5px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 4px;
+            color: #e0e0e0;
+            width: 100%;
+        }
+
+        .keyboard-map {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+
+        .key-mapping {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        .key-mapping strong {
+            color: #00d4ff;
+        }
+
+        #loadingBar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        #loadingProgress {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 DuckStation WebAssembly - THPS 🛹</h1>
+
+        <div class="status" id="status">
+            Initializing DuckStation WebAssembly module...
+        </div>
+
+        <div id="loadingBar">
+            <div id="loadingProgress"></div>
+        </div>
+
+        <canvas id="gameCanvas" width="640" height="480"></canvas>
+
+        <div class="controls">
+            <h3>🎮 Controls</h3>
+            <div class="keyboard-map">
+                <div class="key-mapping"><strong>Arrow Keys:</strong> D-Pad</div>
+                <div class="key-mapping"><strong>Z:</strong> Cross (X)</div>
+                <div class="key-mapping"><strong>X:</strong> Circle</div>
+                <div class="key-mapping"><strong>A:</strong> Square</div>
+                <div class="key-mapping"><strong>S:</strong> Triangle</div>
+                <div class="key-mapping"><strong>Q:</strong> L1</div>
+                <div class="key-mapping"><strong>W:</strong> R1</div>
+                <div class="key-mapping"><strong>E:</strong> L2</div>
+                <div class="key-mapping"><strong>R:</strong> R2</div>
+                <div class="key-mapping"><strong>Enter:</strong> Start</div>
+                <div class="key-mapping"><strong>Shift:</strong> Select</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h3>📂 Load Game</h3>
+            <div class="file-input">
+                <label for="biosFile">PS1 BIOS (SCPH1001.BIN):</label>
+                <input type="file" id="biosFile" accept=".bin,.BIN">
+                <small style="color: #888;">Must be named SCPH1001.BIN or similar PS1 BIOS file</small>
+            </div>
+            <div class="file-input">
+                <label for="gameFile">Game CUE file (thps.cue):</label>
+                <input type="file" id="gameFile" accept=".cue">
+            </div>
+            <div class="file-input">
+                <label for="binFile">Game BIN file (thps.bin):</label>
+                <input type="file" id="binFile" accept=".bin">
+            </div>
+            <button id="loadBtn" onclick="loadGame()">Load Game</button>
+            <button id="autoloadBtn" onclick="autoLoadFromRoms()">Auto-Load THPS from /roms</button>
+        </div>
+    </div>
+
+    <script type="module">
+        let Module = null;
+        let gameRunning = false;
+
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = 'status ' + type;
+            console.log('[Status]', message);
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('loadingProgress').style.width = percent + '%';
+        }
+
+        // Load the DuckStation WebAssembly module
+        async function initEmulator() {
+            try {
+                updateStatus('📥 Downloading DuckStation WASM module (9.5 MB with debug symbols)...', 'info');
+                updateProgress(5);
+
+                // Import the Emscripten-generated module (latest build with logging disabled)
+                const createModule = await import('./duckstation/duckstation-web.js');
+                updateStatus('📦 WASM module downloaded, compiling...', 'info');
+                updateProgress(40);
+
+                updateStatus('🔧 Compiling and initializing WebAssembly...', 'info');
+                updateProgress(60);
+
+                Module = await createModule.default({
+                    canvas: document.getElementById('gameCanvas'),
+                    printErr: (text) => console.error('[DuckStation]', text),
+                    print: (text) => console.log('[DuckStation]', text),
+                    onRuntimeInitialized: () => {
+                        updateStatus('✓ DuckStation ready! Select your files below to start playing.', 'success');
+                        updateProgress(100);
+                        console.log('[DuckStation] Runtime initialized');
+                    }
+                });
+
+                window.DuckStation = Module;
+
+            } catch (error) {
+                updateStatus('✗ Failed to load DuckStation: ' + error.message, 'error');
+                console.error('Initialization error:', error);
+            }
+        }
+
+        // Auto-load THPS from /roms directory (if accessible)
+        window.autoLoadFromRoms = async function() {
+            updateStatus('Attempting to auto-load THPS from /roms...', 'info');
+
+            try {
+                // For file://  protocol, we can't fetch directly
+                // This will need to be run from a local server
+                updateStatus('⚠ Auto-load requires running from a web server. Please use manual file selection or run: npm install -g http-server && http-server', 'error');
+            } catch (error) {
+                updateStatus('✗ Auto-load failed: ' + error.message, 'error');
+            }
+        };
+
+        // Helper to read file with progress tracking
+        async function readFileWithProgress(file, description) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+
+                reader.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percentLoaded = Math.round((e.loaded / e.total) * 100);
+                        const loadedMB = (e.loaded / 1024 / 1024).toFixed(1);
+                        updateStatus(`📂 ${description}: ${percentLoaded}% (${loadedMB} / ${fileSizeMB} MB)`, 'info');
+                        updateProgress(percentLoaded);
+                    }
+                };
+
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error(`Failed to read ${file.name}`));
+
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Load game manually from file inputs
+        window.loadGame = async function() {
+            if (!Module) {
+                updateStatus('✗ Emulator not initialized yet!', 'error');
+                return;
+            }
+
+            const biosFile = document.getElementById('biosFile').files[0];
+            const cueFile = document.getElementById('gameFile').files[0];
+            const binFile = document.getElementById('binFile').files[0];
+
+            if (!biosFile) {
+                updateStatus('✗ Please select a BIOS file', 'error');
+                return;
+            }
+
+            if (!cueFile || !binFile) {
+                updateStatus('✗ Please select both CUE and BIN files', 'error');
+                return;
+            }
+
+            try {
+                // Disable load button during loading
+                document.getElementById('loadBtn').disabled = true;
+
+                updateStatus('📁 Reading BIOS file...', 'info');
+                updateProgress(0);
+
+                // Read BIOS with progress
+                const biosData = await readFileWithProgress(biosFile, 'Loading BIOS');
+                const biosArray = new Uint8Array(biosData);
+
+                // Create virtual filesystem
+                updateStatus('📂 Creating virtual filesystem...', 'info');
+                try {
+                    Module.FS.mkdir('/data');
+                } catch (e) {
+                    // Directory may already exist
+                }
+                try {
+                    Module.FS.mkdir('/data/bios');
+                } catch (e) {
+                    // Directory may already exist
+                }
+                try {
+                    Module.FS.mkdir('/games');
+                } catch (e) {
+                    // Directory may already exist
+                }
+
+                // Write BIOS to virtual FS
+                updateStatus('💾 Writing BIOS to virtual filesystem...', 'info');
+                Module.FS.writeFile('/data/bios/' + biosFile.name, biosArray);
+                updateStatus(`✓ BIOS loaded: ${biosFile.name} (${(biosFile.size / 1024).toFixed(0)} KB)`, 'success');
+
+                // Read CUE file (text, very fast)
+                updateStatus('📄 Reading CUE file...', 'info');
+                const cueData = await cueFile.text();
+                Module.FS.writeFile('/games/' + cueFile.name, cueData);
+                updateStatus(`✓ CUE file loaded: ${cueFile.name}`, 'success');
+
+                // Read BIN file with progress (this is the big one - 630 MB!)
+                updateProgress(0);
+                const binData = await readFileWithProgress(binFile, 'Loading ROM');
+                const binArray = new Uint8Array(binData);
+
+                updateStatus('💾 Writing ROM to virtual filesystem (this may take a moment)...', 'info');
+                updateProgress(50);
+                Module.FS.writeFile('/games/' + binFile.name, binArray);
+                updateStatus(`✓ ROM loaded: ${binFile.name} (${(binFile.size / 1024 / 1024).toFixed(0)} MB)`, 'success');
+                updateProgress(100);
+
+                // Call emulator functions
+                updateStatus('⚙️ Initializing PS1 emulator...', 'info');
+
+                if (Module._duckstation_init) {
+                    const initResult = Module._duckstation_init();
+                    if (initResult !== 0) {
+                        updateStatus('✗ Emulator initialization failed', 'error');
+                        document.getElementById('loadBtn').disabled = false;
+                        return;
+                    }
+                    updateStatus('✓ Emulator initialized', 'success');
+                }
+
+                if (Module._duckstation_load_bios) {
+                    updateStatus('🔧 Loading BIOS into emulator...', 'info');
+                    const biosPath = '/data/bios/' + biosFile.name;
+                    console.log('[LoadGame] Calling duckstation_load_bios with path:', biosPath);
+                    const biosResult = Module.ccall('duckstation_load_bios', 'number', ['string'], [biosPath]);
+                    console.log('[LoadGame] duckstation_load_bios returned:', biosResult);
+                    if (biosResult === 0) {
+                        updateStatus('✗ BIOS load failed - check console for details', 'error');
+                        document.getElementById('loadBtn').disabled = false;
+                        return;
+                    }
+                    updateStatus('✓ BIOS path configured', 'success');
+                }
+
+                if (Module._duckstation_boot_game) {
+                    updateStatus('🎮 Booting Tony Hawk\'s Pro Skater...', 'info');
+                    const gamePath = '/games/' + cueFile.name;
+                    console.log('[LoadGame] Calling duckstation_boot_game with path:', gamePath);
+                    console.log('[LoadGame] Module._duckstation_boot_game:', Module._duckstation_boot_game);
+
+                    try {
+                        // Use cwrap instead of ccall for better string handling
+                        const bootGame = Module.cwrap('duckstation_boot_game', 'number', ['string']);
+                        const gameResult = bootGame(gamePath);
+                        console.log('[LoadGame] duckstation_boot_game returned:', gameResult);
+                        if (gameResult === 0) {
+                            updateStatus('✗ Game boot failed - check console for DuckStation errors', 'error');
+                            document.getElementById('loadBtn').disabled = false;
+                            return;
+                        }
+                        updateStatus('✓ Game booted successfully!', 'success');
+                    } catch (e) {
+                        console.error('[LoadGame] Exception calling duckstation_boot_game:', e);
+                        console.error('[LoadGame] Stack trace:', e.stack);
+                        updateStatus('✗ Error calling boot function: ' + e.message, 'error');
+                        document.getElementById('loadBtn').disabled = false;
+                        return;
+                    }
+                }
+
+                updateStatus('✓ Game loaded! Starting emulation... 🛹', 'success');
+                startGameLoop();
+
+            } catch (error) {
+                updateStatus('✗ Error loading game: ' + error.message, 'error');
+                console.error('Load error:', error);
+                document.getElementById('loadBtn').disabled = false;
+            }
+        };
+
+        // Main game loop
+        function startGameLoop() {
+            if (!gameRunning) {
+                gameRunning = true;
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function gameLoop() {
+            if (!gameRunning || !Module || !Module._duckstation_frame) {
+                return;
+            }
+
+            // Run one frame of emulation
+            Module._duckstation_frame();
+
+            // Continue loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', initEmulator);
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            gameRunning = false;
+            if (Module && Module._duckstation_shutdown) {
+                Module._duckstation_shutdown();
+            }
+        });
+    </script>
+</body>
+</html>

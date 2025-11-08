@@ -76,7 +76,7 @@ add_library(core
   gte.cpp
   gte.h
   gte_types.h
-  host.cpp
+  $<$<NOT:$<BOOL:${EMSCRIPTEN}>>:host.cpp>
   host.h
   hotkeys.cpp
   input_types.h
@@ -142,7 +142,15 @@ target_precompile_headers(core PRIVATE "pch.h")
 target_include_directories(core PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/..")
 target_include_directories(core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
 target_link_libraries(core PUBLIC Threads::Threads common util)
-target_link_libraries(core PRIVATE xxhash imgui rapidyaml rcheevos cpuinfo::cpuinfo ZLIB::ZLIB zstd::libzstd_shared libzip::zip)
+
+# For Emscripten, skip some libraries that aren't available or needed
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  target_link_libraries(core PRIVATE xxhash imgui rapidyaml rcheevos ZLIB::ZLIB libzip::zip)
+  # Add recompiler stubs for WebAssembly (JIT not supported)
+  target_sources(core PRIVATE cpu_recompiler_stubs_web.cpp)
+else()
+  target_link_libraries(core PRIVATE xxhash imgui rapidyaml rcheevos cpuinfo::cpuinfo ZLIB::ZLIB zstd::libzstd_shared libzip::zip)
+endif()
 
 if(CPU_ARCH_X64)
   target_compile_definitions(core PUBLIC "ENABLE_RECOMPILER=1" "ENABLE_MMAP_FASTMEM=1")
